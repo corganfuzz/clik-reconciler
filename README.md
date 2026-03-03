@@ -1,9 +1,9 @@
 # ClikOps Reconciler
 
-## What Is This?
-
 > [!TIP]
-> Get all EC2 instances created manually by people and bring it under terraform management for total control.
+> **TL;DR** Get all EC2 instances created manually by people and bring it under terraform management for total control.
+
+## What Is This?
 
 This Reconciler discovers every ClickOps EC2 instance in an AWS account, extracts its full configuration (AMI, instance type, volumes, tags, security groups, etc.), and generates the exact Terraform code needed to adopt them — without destroying, recreating, or modifying a single instance.
 

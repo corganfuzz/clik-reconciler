@@ -6,7 +6,7 @@ The Clik Reconciler is a purpose-built automation tool designed to bring "ClickO
 
 The principle: **automate the discovery, generate the config, and let Terraform handle the state reconcilitation.**
 
-```mermaid
+```
 ┌──────────────────────────────────────────────────────────┐
 │  Phase 1: DISCOVER                                       │
 │  Script queries AWS API → produces structured manifest   │

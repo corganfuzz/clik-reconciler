@@ -19,8 +19,3 @@ tfplan
 
 # OS files
 .DS_Store
-
-DATABRICKS_ARCHITECTURE.md
-test_prompts.md
-
- src/services/api.js

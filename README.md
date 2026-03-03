@@ -219,7 +219,12 @@ import {
 
 Now let Terraform read both files and build an execution plan.
 
-The `env/dev/` directory contains a file called `localstack_override.tf` that redirects all Terraform AWS API calls to `http://localhost:4566` with dummy credentials. This is what makes Terraform talk to LocalStack instead of real AWS — no config changes needed on your part.
+The `env/dev/` directory contains a file called `localstack_override.tf`. This is a crucial part of the local testing setup. It works by:
+1.  **Overriding the AWS Provider**: It defines an `aws` provider block that takes precedence over the default configuration.
+2.  **Redirecting Endpoints**: It explicitly sets the `ec2` endpoint to `http://localhost:4566`, ensuring all EC2-related API calls are sent to LocalStack.
+3.  **Bypassing AWS Checks**: It uses dummy credentials (`access_key = "test"`, `secret_key = "test"`) and sets flags like `skip_credentials_validation` and `skip_metadata_api_check` to `true` to avoid errors when not connected to a real AWS environment.
+
+This file is what makes Terraform talk to LocalStack instead of real AWS — no manual configuration changes are needed for local testing.
 
 ```bash
 cd env/dev
@@ -423,24 +428,23 @@ clik-reconciler/
 │   ├── storage/                        # S3 bucket module
 │   └── iam/                            # IAM roles and instance profiles
 ├── infrastructure/
-│   ├── main.tf                         # Module wiring: for_each over vm_instances
-│   └── variables.tf                    # Type-strict variable definitions
+│   ├── main.tf                         
+│   └── variables.tf                    
 ├── env/
 │   ├── dev/
-│   │   ├── dev.tf                      # Calls the infrastructure module
-│   │   ├── locals.tf                   # Project name, region, bucket configs
-│   │   ├── providers.tf                # AWS provider configuration
-│   │   ├── variables.tf                # Variable declarations for this environment
+│   │   ├── dev.tf                      
+│   │   ├── locals.tf                   
+│   │   ├── providers.tf                
+│   │   ├── variables.tf                
 │   │   ├── localstack_override.tf      # Redirects Terraform to LocalStack (mock testing)
 │   │   ├── vm_instances.auto.tfvars.json  # (generated) — do not commit until production import
 │   │   └── vm_imports.tf               # (generated, one-time) — delete after terraform apply
-│   ├── staging/                        # Staging environment configs
-│   └── prod/                           # Production environment configs
+│   ├── staging/                        
+│   └── prod/                           
 └── scripts/
     ├── generate_vm_imports.py          # The reconciler: discovers instances → generates .tf + .json
-    ├── setup_remote_state.sh           # Creates S3 bucket + DynamoDB table for Terraform state backend
-    ├── destroy_remote_state.sh         # Removes the remote state backend resources
-    ├── cleanup_aws_env.sh              # Tears down AWS resources created during testing
-    ├── cleanup_local_state.sh          # Deletes local .terraform/ directory and lock files
-    └── sync_kb.sh                      # Syncs knowledge base content
+    ├── setup_remote_state.sh           
+    ├── destroy_remote_state.sh         
+    ├── cleanup_aws_env.sh              
+    ├── cleanup_local_state.sh          
 ```

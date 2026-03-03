@@ -38,7 +38,7 @@ The discovery script (`scripts/generate_vm_imports.py`) is designed for enterpri
 
 ### 1. Reconciler Script Output (Terminal)
 When you run `python3 generate_vm_imports.py`, you should see:
-```text
+```
 Caching all Volume metadata (O(1) network calls)...
 Fetching EC2 instances...
 Generated 1000 VM configurations in ../env/dev/vm_instances.auto.tfvars.json
@@ -67,6 +67,7 @@ The script produces a machine-readable map that Terraform automatically loads:
 
 ### 3. Generated Import Blocks (`vm_imports.tf`)
 These blocks allow Terraform to "claim" existing resources without destroying them:
+
 ```hcl
 import {
   to = module.infrastructure.module.vm["prod-vm-1"].aws_instance.this
@@ -74,13 +75,16 @@ import {
 }
 
 ### 4. Terraform Plan (Reconciliation Goal)
-A successful reconciliation will show **0 additions, 0 changes, and 0 destructions**:
-```text
+
+A successful reconciliation will show:
+
+**0 additions, 0 changes, and 0 destructions**:
+
+```hcl
 module.infrastructure.module.vm["prod-vm-1"].aws_instance.this: Preparing import...
 module.infrastructure.module.vm["prod-vm-1"].aws_instance.this: Refreshing state...
 
 Plan: 1000 to import, 0 to add, 0 to change, 0 to destroy.
-```
 ```
 
 ---

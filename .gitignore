@@ -1,0 +1,26 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+!env/**/*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+_override.tf
+_override.tf.json
+.terraformrc
+terraform.rc
+
+# Terraform Plan
+tfplan
+
+# OS files
+.DS_Store
+
+DATABRICKS_ARCHITECTURE.md
+test_prompts.md
+
+ src/services/api.js

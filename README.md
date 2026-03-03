@@ -73,14 +73,13 @@ import {
   to = module.infrastructure.module.vm["prod-vm-1"].aws_instance.this
   id = "i-0abcd1234efgh5678"
 }
-
+```
 ### 4. Terraform Plan (Reconciliation Goal)
 
 A successful reconciliation will show:
 
 **0 additions, 0 changes, and 0 destructions**:
-
-```hcl
+```bash
 module.infrastructure.module.vm["prod-vm-1"].aws_instance.this: Preparing import...
 module.infrastructure.module.vm["prod-vm-1"].aws_instance.this: Refreshing state...
 

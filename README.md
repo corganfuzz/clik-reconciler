@@ -351,6 +351,64 @@ The discovery script (`scripts/generate_vm_imports.py`) is designed for enterpri
 
 It solves the **N+1 Query Problem**: a naïve implementation would make one `describe-volumes` call per instance (1,000 API calls). This script makes one bulk call and caches the result.
 
+### The Data Structure: Why `map(object)` Makes This Work
+
+The entire pipeline hinges on one Terraform type — `map(object({...}))`. This is the variable type that receives the generated JSON and feeds instances into the module via `for_each`:
+
+```hcl
+# infrastructure/variables.tf
+variable "vm_instances" {
+  type = map(object({
+    ami                  = string
+    instance_type        = string
+    subnet_id            = string
+    security_group_ids   = list(string)
+    key_name             = string
+    iam_instance_profile = string
+    tags                 = map(string)
+    platform             = string
+    root_volume = object({
+      size        = number
+      volume_type = string
+      encrypted   = bool
+    })
+    ebs_volumes = optional(map(object({
+      size        = number
+      volume_type = string
+      encrypted   = bool
+      device_name = string
+    })), {})
+  }))
+}
+```
+
+The closest equivalent in the Python script is the `volume_cache` dictionary — a `dict[str, dict]` that serves the exact same purpose: **keyed lookup in constant time.**
+
+```python
+# scripts/generate_vm_imports.py — the volume cache
+volume_cache: dict[str, dict] = {}
+
+for vol in describe_volumes():
+    volume_cache[vol['VolumeId']] = {
+        'size': vol['Size'],
+        'volume_type': vol['VolumeType'],
+        'encrypted': vol.get('Encrypted', False)
+    }
+
+# Later, for each instance's block device:
+vol_data = volume_cache.get(vol_id, default)  # O(1) lookup
+```
+
+| Concept | Terraform (HCL) | Python |
+|---------|-----------------|--------|
+| Data structure | `map(object({...}))` | `dict[str, dict]` |
+| Key | Instance name (`"prod-vm-1"`) | Volume ID (`"vol-abc123"`) |
+| Value | Typed object with fixed fields | Dictionary with arbitrary keys |
+| Lookup cost | O(1) via `for_each = var.vm_instances` | O(1) via `volume_cache.get(vol_id)` |
+| Type safety | Enforced at `terraform plan` — wrong types fail before anything runs | None at runtime — a bad key silently returns `None` |
+
+Think of it like a **filing cabinet with labeled drawers**. A naïve approach would be walking to the warehouse, finding the right box, and bringing it back to your desk *every time you need a single document* — that's the N+1 problem (1,000 trips for 1,000 instances). The `map` / `dict` approach is pulling *every document* into your filing cabinet once, then opening the right drawer by label in constant time. The drawer label is the instance name in Terraform, or the Volume ID in Python.
+
 ---
 
 ## File Structure

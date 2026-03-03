@@ -82,7 +82,7 @@ Launching 100–1000 EC2 instances that exist in "AWS" but have zero Terraform c
 
 Make sure Docker is running, then start a LocalStack container:
 
-```bash
+```python
 docker run --rm -d \
   --name localstack \
   -p 4566:4566 \
@@ -102,7 +102,7 @@ You should see `"ec2": "running"` (or `"available"`) in the output.
 
 Install `awscli-local` and `boto3` on your **host machine**. `awslocal` is a wrapper around the AWS CLI that automatically points all commands at LocalStack (`localhost:4566`) so you don't have to pass `--endpoint-url` every time. `boto3` is the Python AWS SDK that the reconciler script uses.
 
-```bash
+```python
 pip install awscli-local boto3
 ```
 
@@ -157,7 +157,7 @@ python3 generate_vm_imports.py
 
 The endpoint defaults to `http://localhost:4566` (LocalStack). To point it at a real AWS account or a different endpoint, pass it as an argument:
 
-```bash
+```python
 python3 generate_vm_imports.py https://ec2.us-east-1.amazonaws.com
 ```
 

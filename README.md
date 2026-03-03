@@ -78,7 +78,10 @@ import {
 
 A successful reconciliation will show:
 
+```bash
 **0 additions, 0 changes, and 0 destructions**:
+```
+
 ```bash
 module.infrastructure.module.vm["prod-vm-1"].aws_instance.this: Preparing import...
 module.infrastructure.module.vm["prod-vm-1"].aws_instance.this: Refreshing state...

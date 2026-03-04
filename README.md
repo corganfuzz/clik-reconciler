@@ -32,8 +32,8 @@ The end result: every instance is managed as Infrastructure as Code. From that p
  ┌────────────────────┐   ┌───────────────────────┐
  │  OUTPUT FILE 1:    │   │  OUTPUT FILE 2:       │
  │  vm_instances      │   │  vm_imports.tf        │
- │  .auto.tfvars.json │   │  (import {} blocks)   │
- └────────┬───────────┘   └───────────┬───────────┘
+ │  imported_vms.tf    │   │  (import {} blocks)   │
+ └─────────┬──────────┘   └───────────┬───────────┘
           │                           │
           └─────────────┬─────────────┘
                         ▼
@@ -56,7 +56,7 @@ The end result: every instance is managed as Infrastructure as Code. From that p
  ┌──────────────────────────────────────────────────┐
  │  RESULT: N instances now in Terraform state      │
  │  vm_imports.tf deleted (one-time use)            │
- │  vm_instances.auto.tfvars.json committed to Git  │
+ │  imported_vms.tf committed to Git                │
  │  All future changes go through Terraform         │
  └──────────────────────────────────────────────────┘
 ```
@@ -118,6 +118,7 @@ for i in {1..100}; do
     --count 1 \
     --instance-type t2.micro \
     --region us-east-1 \
+    --no-cli-pager \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=mock-server-$i}]"
 done
 ```
@@ -128,9 +129,10 @@ for i in {1..1000}; do
   awslocal ec2 run-instances \
     --image-id ami-12345678 \
     --count 1 \
-    --instance-type t3.large \
+    --instance-type t2.micro \
     --region us-east-1 \
-    --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=prod-vm-$i}]"
+    --no-cli-pager \
+    --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=mock-server-$i}]"
 done
 ```
 
@@ -148,11 +150,13 @@ awslocal ec2 describe-instances \
 
 ### Step 2 — Run the Reconciler (Discovery + Code Generation)
 
-The script `scripts/generate_vm_imports.py` connects to the AWS API (or LocalStack), discovers every running instance, and generates two Terraform-ready files.
+The script `scripts/generate_vm_imports.py` connects to the AWS API (or LocalStack), discovers every running instance, and generates two Terraform-ready files:
+- `env/dev/imported_vms.tf`: A Terraform file containing a `locals` block with all the imported VM configs.
+- `env/dev/vm_imports.tf`: The exact `import {}` blocks required to pull them into state.
 
 ```bash
 cd scripts
-python3 generate_vm_imports.py
+uv run generate_vm_imports.py
 ```
 
 The endpoint defaults to `http://localhost:4566` (LocalStack). To point it at a real AWS account or a different endpoint, pass it as an argument:
@@ -166,13 +170,13 @@ python3 generate_vm_imports.py https://ec2.us-east-1.amazonaws.com
 Using endpoint: http://localhost:4566
 Caching all Volume metadata (O(1) network calls)...
 Fetching EC2 instances...
-Generated 1000 VM configurations in ../env/dev/vm_instances.auto.tfvars.json
+Generated 1000 VM configurations in ../env/dev/imported_vms.tf
 Generated 1000 import blocks in ../env/dev/vm_imports.tf
 ```
 
-#### Output File 1: `env/dev/vm_instances.auto.tfvars.json`
+#### Output File 1: `env/dev/imported_vms.tf`
 
-A JSON map of every discovered instance. Terraform auto-loads any file ending in `.auto.tfvars.json`, so this file feeds directly into the `vm_instances` variable without any manual wiring. Example:
+A native HCL `locals` file containing every discovered instance. The `dev.tf` file references this block (`local.imported_vms`) to feed the Terraform module. Example:
 
 ```json
 {
@@ -233,7 +237,7 @@ terraform plan
 ```
 
 **What `terraform plan` does:**
-1. Reads `vm_instances.auto.tfvars.json` → populates the `vm_instances` variable map.
+1. Reads `imported_vms.tf` → populates `local.imported_vms`, passed to `module "infrastructure"`.
 2. The `infrastructure` module iterates the map with `for_each` → creates a `module.vm["key"]` for every entry.
 3. Reads `vm_imports.tf` → sees 1,000 `import {}` blocks.
 4. For each import block, Terraform calls the AWS API (LocalStack) to fetch the live state of that instance ID.
@@ -263,7 +267,31 @@ This is where the actual import happens. Terraform writes each instance's full s
 Apply complete! Resources: 1000 imported, 0 added, 0 changed, 0 destroyed.
 ```
 
-**At this point:** All 1,000 instances exist in the Terraform state. Terraform now "owns" them.
+Boom. Terraform will adopt the EC2 instances exactly as they are without replacing them. Note: Terraform may say "100 to change" — this is completely normal! It is just applying the standardized tags (Project, Environment, ManagedBy) defined in our module to your previously untagged VMs.
+
+### Step 7. Day 2: The Cleanup (Crucial Step)
+
+This is the beauty of this architecture. Once the import is successful, the resources are in your local state file.
+You can now delete the temporary import blocks file, as Terraform remembers the linkage:
+
+```bash
+rm vm_imports.tf
+```
+
+Because `generate_vm_imports.py` output a native HCL `locals` file (`imported_vms.tf`), you can now manage these servers alongside any brand new servers exactly the same way. Simply edit the `imported_vms` block manually to resize hard drives or add security groups safely!
+
+Verify the state is clean and Terraform sees no pending changes:
+
+```bash
+terraform plan
+```
+
+**Expected output:**
+```
+No changes. Your infrastructure matches the configuration.
+```
+
+This confirms that the `imported_vms.tf` configuration file and the Terraform module definition perfectly describe the live infrastructure. From this point forward, any changes to these instances must go through the Terraform workflow.
 
 ---
 
@@ -286,7 +314,7 @@ terraform plan
 No changes. Your infrastructure matches the configuration.
 ```
 
-This confirms that the `.auto.tfvars.json` configuration file and the Terraform module definition perfectly describe the live infrastructure. From this point forward, any changes to these instances must go through the Terraform workflow.
+This confirms that the `imported_vms.tf` configuration file and the Terraform module definition perfectly describe the live infrastructure. From this point forward, any changes to these instances must go through the Terraform workflow.
 
 ---
 
@@ -294,7 +322,7 @@ This confirms that the `.auto.tfvars.json` configuration file and the Terraform 
 
 ```bash
 cd ../..
-git add env/dev/vm_instances.auto.tfvars.json
+git add env/dev/imported_vms.tf
 git add modules/ infrastructure/ env/
 git commit -m "Import 1000 ClickOps instances into Terraform management"
 ```
@@ -309,7 +337,7 @@ When you're done testing, stop LocalStack and remove the generated files:
 
 ```bash
 docker stop localstack
-rm env/dev/vm_imports.tf env/dev/vm_instances.auto.tfvars.json 2>/dev/null
+rm env/dev/vm_imports.tf env/dev/imported_vms.tf 2>/dev/null
 ```
 
 ---
@@ -320,7 +348,7 @@ After a real production run, here's what your repo and state look like:
 
 **In Git (version-controlled):**
 ```
-env/dev/vm_instances.auto.tfvars.json   ← Configuration for every imported instance
+env/dev/imported_vms.tf                 ← Configuration for every imported instance
 modules/vm/main.tf                      ← Reusable EC2 module that describes the resource
 infrastructure/main.tf                  ← Wiring: for_each over the instance map
 ```
@@ -337,9 +365,9 @@ module.infrastructure.module.vm["prod-vm-1000"].aws_instance.this
 **In the AWS Console:** Exactly the same instances as before. Nothing was created, destroyed, or restarted. The only difference is that Terraform now tracks them.
 
 **What changes going forward:**
-- Want to change an instance type? Edit `vm_instances.auto.tfvars.json`, run `terraform plan`, review the diff, `terraform apply`.
-- Want to decommission an instance? Remove its entry from the JSON, `terraform apply` → Terraform terminates it.
-- Want to audit configuration? `git log env/dev/vm_instances.auto.tfvars.json`.
+- Want to change an instance type? Edit `imported_vms.tf`, run `terraform plan`, review the diff, `terraform apply`.
+- Want to decommission an instance? Remove its entry from the HCL file, `terraform apply` → Terraform terminates it.
+- Want to audit configuration? `git log env/dev/imported_vms.tf`.
 - Want to replicate the environment? The module + JSON are portable to any AWS account.
 
 ---
@@ -437,12 +465,12 @@ clik-reconciler/
 │   │   ├── providers.tf                
 │   │   ├── variables.tf                
 │   │   ├── localstack_override.tf      # Redirects Terraform to LocalStack (mock testing)
-│   │   ├── vm_instances.auto.tfvars.json  # (generated) — do not commit until production import
+│   │   ├── imported_vms.tf  # (generated) — move to locals.tf eventually
 │   │   └── vm_imports.tf               # (generated, one-time) — delete after terraform apply
 │   ├── staging/                        
 │   └── prod/                           
 └── scripts/
-    ├── generate_vm_imports.py          # The reconciler: discovers instances → generates .tf + .json
+    ├── generate_vm_imports.py          # The reconciler: discovers instances → generates native .tf
     ├── setup_remote_state.sh           
     ├── destroy_remote_state.sh         
     ├── cleanup_aws_env.sh              

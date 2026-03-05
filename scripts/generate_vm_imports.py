@@ -10,7 +10,7 @@ from typing import Optional, Any
 def sanitize_name(name: str) -> str:
     return re.sub(r"[^a-zA-Z0-9-_]", "-", name).lower()
 
-# Buil all EBS volume metadata 
+# Build all EBS volume metadata 
 def build_volume_cache(ec2) -> dict:
     print("Caching all Volume metadata (O(1) network calls)...")
     cache: dict = {}

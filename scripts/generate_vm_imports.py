@@ -10,12 +10,8 @@ from typing import Optional, Any
 def sanitize_name(name: str) -> str:
     return re.sub(r"[^a-zA-Z0-9-_]", "-", name).lower()
 
-
+# Buil all EBS volume metadata 
 def build_volume_cache(ec2) -> dict:
-    """
-    Bulk-fetch all EBS volume metadata to solve the N+1 API Query Problem.
-    Returns: { volume_id: { size, volume_type, encrypted } }
-    """
     print("Caching all Volume metadata (O(1) network calls)...")
     cache: dict = {}
     try:
@@ -31,10 +27,8 @@ def build_volume_cache(ec2) -> dict:
         print(f"Warning: Could not fetch volumes: {e}")
     return cache
 
-
+# Classify block device mappings into root volume and extra EBS volumes.
 def parse_block_devices(instance: dict, volume_cache: dict) -> tuple:
-    """Classify block device mappings into root volume and extra EBS volumes."""
-
     root_device_name = instance.get("RootDeviceName", "")
     root_volume = None
     ebs_volumes: dict = {}
@@ -56,10 +50,8 @@ def parse_block_devices(instance: dict, volume_cache: dict) -> tuple:
 
     return (root_volume or default_vol.copy(), ebs_volumes)
 
-
+# Extract configuration from an EC2 instance
 def parse_instance(instance: dict, volume_cache: dict, seen_keys: set) -> tuple:
-    """Extract configuration from an EC2 instance, returning (tf_key, {id, tf_config})."""
-
     tags = {tag["Key"]: tag["Value"] for tag in instance.get("Tags", [])}
     tf_key = sanitize_name(tags.get("Name", instance["InstanceId"]))
 
@@ -133,10 +125,8 @@ def _format_list(obj: list, pad: str, indent: int) -> str:
         return "[]"
     return "[" + ", ".join(dict_to_hcl(i, indent) for i in obj) + "]"
 
-
+# Format Python objects as valid HCL
 def dict_to_hcl(obj: Any, indent: int = 0) -> str:
-    """Format Python objects as valid Terraform HCL (Python 3.9+ compatible)."""
-
     pad = " " * indent
 
     # Order matters: bool must be checked before int because True is an instance of int in Python

@@ -502,7 +502,7 @@ clik-reconciler/
 │   │   ├── variables.tf                
 │   │   └── outputs.tf                
 │   ├── storage/                        
-│   └── iam/                            #
+│   └── iam/                            
 ├── infrastructure/
 │   ├── main.tf                         
 │   └── variables.tf                    

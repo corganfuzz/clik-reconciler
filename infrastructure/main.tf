@@ -9,10 +9,9 @@ module "storage" {
 module "iam" {
   source = "../modules/iam"
 
-  project_name = var.project_name
-  environment  = var.environment
-  # storage_bucket_arns = module.storage.bucket_arns
-  storage_bucket_arns = {}
+  project_name        = var.project_name
+  environment         = var.environment
+  storage_bucket_arns = module.storage.bucket_arns
   iam_roles           = var.iam_roles
 }
 

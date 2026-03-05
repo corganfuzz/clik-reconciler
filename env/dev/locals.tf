@@ -22,3 +22,5 @@ locals {
     "vm-basic" = { trust_service = "ec2.amazonaws.com" }
   }
 }
+
+

@@ -178,23 +178,35 @@ Generated 1000 import blocks in ../env/dev/vm_imports.tf
 
 A native HCL `locals` file containing every discovered instance. The `dev.tf` file references this block (`local.imported_vms`) to feed the Terraform module. Example:
 
-```json
-{
-  "vm_instances": {
-    "prod-vm-1": {
-      "ami": "ami-12345678",
-      "instance_type": "t3.large",
-      "subnet_id": "subnet-mock",
-      "security_group_ids": ["sg-12345"],
-      "key_name": "prod-key",
-      "iam_instance_profile": "",
-      "tags": { "Name": "prod-vm-1", "Environment": "Prod" },
-      "platform": "linux",
-      "root_volume": { "size": 20, "volume_type": "gp3", "encrypted": true },
-      "ebs_volumes": {}
+```hcl
+# AUTO-GENERATED - Migrate these to locals.tf when ready
+locals {
+  imported_vms = {
+    mock-server-1 = {
+      ami = "ami-12345678"
+      instance_type = "t2.micro"
+      subnet_id = "subnet-0a4b688ef05dc14ef"
+      security_group_ids = []
+      key_name = ""
+      iam_instance_profile = ""
+      tags = {
+        Name = "mock-server-1"
+        Project = "clik-reconciler"
+        ManagedBy = "Terraform"
+        Platform = "linux"
+        Environment = "dev"
+        gss-production = "true"
+      }
+      platform = "linux"
+      root_volume = {
+        size = 8
+        volume_type = "gp2"
+        encrypted = false
+      }
+      ebs_volumes = {}
+      }
     }
-  }
-}
+    mock-server-2 = {...
 ```
 
 #### Output File 2: `env/dev/vm_imports.tf`
@@ -484,11 +496,11 @@ This single massive dictionary of all instances is finally passed to the native 
 clik-reconciler/
 ├── modules/
 │   ├── vm/                             # Reusable EC2 module (instance + volumes)
-│   │   ├── main.tf                     #   Resource definitions with lifecycle rules
-│   │   ├── variables.tf                #   Input variable schema
-│   │   └── outputs.tf                  #   Instance ID and private IP outputs
-│   ├── storage/                        # S3 bucket module
-│   └── iam/                            # IAM roles and instance profiles
+│   │   ├── main.tf                    
+│   │   ├── variables.tf                
+│   │   └── outputs.tf                
+│   ├── storage/                        
+│   └── iam/                            #
 ├── infrastructure/
 │   ├── main.tf                         
 │   └── variables.tf                    

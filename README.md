@@ -9,6 +9,8 @@ This Reconciler discovers every ClickOps EC2 instance in an AWS account, extract
 
 The end result: every instance is managed as Infrastructure as Code. From that point forward, all changes go through `terraform plan` → `terraform apply` → Git.
 
+For a complete implementation proof click [here](https://zircon-lip-5ec.notion.site/Importing-EC2-Instances-as-IaC-319266e0cc2380c0a1bfdea7817ea771)
+
 ---
 
 ## How It Works
